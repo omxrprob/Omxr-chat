@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Voice Call</title>
+</head>
+<body>
+  <h2>Voice Call</h2>
+  <p>Calling another user via WebRTC</p>
+  <audio id="remoteAudio" autoplay></audio>
+  <button onclick="startCall()">Start Call</button>
+
+  <script src="script.js"></script>
+  <script>
+    // Simple WebRTC call
+    let peer;
+    const socket = new WebSocket("ws://localhost:3000");
+
+    socket.onmessage = ({ data }) => {
+      const msg = JSON.parse(data);
+      if (msg.type === "offer") {
+        peer.setRemoteDescription(new RTCSessionDescription(msg.offer));
+        peer.createAnswer().then(answer => {
+          peer.setLocalDescription(answer);
+          socket.send(JSON.stringify({ type: "answer", answer }));
+        });
+      }
+      if (msg.type === "answer") {
+        peer.setRemoteDescription(new RTCSessionDescription(msg.answer));
+      }
+      if (msg.type === "candidate") {
+        peer.addIceCandidate(new RTCIceCandidate(msg.candidate));
+      }
+    };
+
+    function startCall() {
+      peer = new RTCPeerConnection();
+
+      peer.onicecandidate = e => {
+        if (e.candidate) {
+          socket.send(JSON.stringify({ type: "candidate", candidate: e.candidate }));
+        }
+      };
+
+      peer.ontrack = e => {
+        document.getElementById("remoteAudio").srcObject = e.streams[0];
+      };
+
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          stream.getTracks().forEach(track => peer.addTrack(track, stream));
+          return peer.createOffer();
+        })
+        .then(offer => {
+          peer.setLocalDescription(offer);
+          socket.send(JSON.stringify({ type: "offer", offer }));
+        });
+    }
+  </script>
+</body>
+</html>
