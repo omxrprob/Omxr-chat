@@ -1,0 +1,12 @@
+body {
+  font-family: sans-serif;
+  padding: 20px;
+  background: #f9f9f9;
+}
+input {
+  padding: 8px;
+  width: 300px;
+}
+button {
+  padding: 8px 12px;
+}
